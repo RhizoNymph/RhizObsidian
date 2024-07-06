@@ -1,0 +1,11 @@
+{
+	"id": "rhizobsidian",
+	"name": "RhizObsidian",
+	"version": "0.0.1",
+	"minAppVersion": "0.15.0",
+	"description": "This is a plugin for using Obsidian to map the Rhizome.",
+	"author": "RhizoNymph",
+	"authorUrl": "https://rhizonymph.com",
+	"fundingUrl": "https://patreon.com/rhizonymph",
+	"isDesktopOnly": false
+}
