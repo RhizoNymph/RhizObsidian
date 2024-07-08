@@ -142,7 +142,7 @@ class ArxivSearchModal extends Modal {
     }
 
     async performSearch(query: string, start: number) {
-        const url = `https://export.arxiv.org/api/query?search_query=${query}&start=${start}&max_results=5&sortBy=lastUpdatedDate&sortOrder=ascending`;
+        const url = `https://export.arxiv.org/api/query?search_query=${query}&start=${start}&max_results=5&sortBy=relevance&sortOrder=ascending`;
         try {
             const response = await request({ url });
             const parser = new DOMParser();
