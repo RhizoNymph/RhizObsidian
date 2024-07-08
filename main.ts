@@ -83,10 +83,148 @@ class EpisodeListModal extends Modal {
     }
 }
 
+class MainSelectionModal extends Modal {
+    plugin: RhizObsidian;
+
+    constructor(app: App, plugin: RhizObsidian) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h1', { text: 'Select Content Type' });
+
+        const podcastsButton = contentEl.createEl('button', { text: 'Podcasts' });
+        podcastsButton.onclick = () => {
+            new EpisodeListModal(this.app, this.plugin).open();
+        };
+
+        const papersButton = contentEl.createEl('button', { text: 'Papers' });
+        papersButton.onclick = () => {
+            new ArxivSearchModal(this.app, this.plugin).open();
+        };
+    }
+}
+
+class ArxivSearchModal extends Modal {
+    plugin: RhizObsidian;
+
+    constructor(app: App, plugin: RhizObsidian) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h1', { text: 'Search Arxiv Papers' });
+
+        const searchInput = contentEl.createEl('input', { type: 'text' });
+        const searchButton = contentEl.createEl('button', { text: 'Search' });
+
+        // Function to handle search
+        const handleSearch = async () => {
+            const query = encodeURIComponent(searchInput.value);
+            const url = `https://export.arxiv.org/api/query?search_query=${query}&sortBy=lastUpdatedDate&sortOrder=ascending`;
+            try {
+                const response = await request({ url });
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(response, "application/xml");
+                const entries = Array.from(xmlDoc.querySelectorAll("entry")).map(entry => {
+                    return {
+                        title: entry.querySelector("title")?.textContent,
+                        summary: entry.querySelector("summary")?.textContent,
+                        id: entry.querySelector("id")?.textContent
+                    }
+                });
+                new SearchResultsModal(this.app, this.plugin, entries).open();
+            } catch (error) {
+                console.error('Failed to fetch papers:', error);
+                new Notice('Failed to fetch papers.');
+            }
+        };
+
+        // Event listener for the search button
+        searchButton.onclick = handleSearch;
+
+        // Event listener for the Enter key in the search input
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                handleSearch();
+            }
+        });
+    }
+}
+
+class SearchResultsModal extends Modal {
+    plugin: RhizObsidian;
+    results: any[];
+
+    constructor(app: App, plugin: RhizObsidian, results: any[]) {
+        super(app);
+        this.plugin = plugin;
+        this.results = results;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h1', { text: 'Search Results' });
+
+        this.results.forEach(result => {
+            const resultEl = contentEl.createEl('div', { cls: 'search-result' });
+            const titleEl = resultEl.createEl('h2', { text: result.title });
+            
+            // Create a collapsible container for the summary
+            const summaryContainer = resultEl.createEl('div', { cls: 'summary-container' });
+            const summaryToggle = summaryContainer.createEl('button', { text: 'Show Summary', cls: 'summary-toggle' });
+            const summaryContent = summaryContainer.createEl('p', { text: result.summary, cls: 'summary-content hidden' });
+
+            // Toggle summary visibility
+            summaryToggle.onclick = () => {
+                summaryContent.classList.toggle('hidden');
+                summaryToggle.textContent = summaryContent.classList.contains('hidden') ? 'Show Summary' : 'Hide Summary';
+            };
+
+            const createNoteButton = resultEl.createEl('button', { text: 'Create Note' });
+            createNoteButton.onclick = async () => {
+                await this.plugin.createNoteAndDownloadPDF(result);
+            };
+        });
+
+        // Add CSS for the collapsible summary
+        this.addStyle();
+    }
+
+    addStyle() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .search-result {
+                margin-bottom: 20px;
+            }
+            .summary-container {
+                margin-top: 10px;
+            }
+            .summary-toggle {
+                margin-bottom: 5px;
+            }
+            .summary-content {
+                margin-left: 20px;
+            }
+            .hidden {
+                display: none;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
 export default class RhizObsidian extends Plugin {
     async onload() {
-        this.addRibbonIcon('dice', 'ZK Podcast', () => {
-            new EpisodeListModal(this.app, this).open();
+        this.addRibbonIcon('dice', 'RhizObsidian', () => {
+            new MainSelectionModal(this.app, this).open();
         });
     }
 
@@ -148,5 +286,35 @@ export default class RhizObsidian extends Plugin {
             console.error('Error creating note:', err);
             new Notice('Error creating note.');
         });
+    }
+
+    async createNoteAndDownloadPDF(result: any) {        
+        const sanitizedTitle = result.title.replace(/[\\/:*?"<>|]/g, '-');
+        const dirPath = `Sources/Papers/${sanitizedTitle}`;
+        const filePath = `${dirPath}/${sanitizedTitle}.md`;
+
+        // Ensure the directory exists before creating the file
+        await this.app.vault.createFolder(dirPath).catch(err => console.error('Error creating folder:', err));
+
+        // Create the note with the summary
+        await this.app.vault.create(filePath, result.summary).catch(err => {
+            console.error('Error creating note:', err);
+            new Notice('Error creating note.');
+        });
+
+        const pdfUrl = result.id.replace('abs', 'pdf');
+        console.log('PDF URL:', pdfUrl);
+        try {
+            const response = await fetch(pdfUrl);
+            if (!response.ok) throw new Error('Failed to fetch PDF');
+            const pdfBlob = await response.blob();
+            const arrayBuffer = await pdfBlob.arrayBuffer();
+            await this.app.vault.createBinary(`${dirPath}/${sanitizedTitle}.pdf`, arrayBuffer);
+            
+            new Notice('PDF downloaded successfully');
+        } catch (error) {
+            console.error('Failed to download PDF:', error);
+            new Notice('Failed to download PDF.');
+        }
     }
 }
