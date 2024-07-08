@@ -127,23 +127,7 @@ class ArxivSearchModal extends Modal {
         // Function to handle search
         const handleSearch = async () => {
             const query = encodeURIComponent(searchInput.value);
-            const url = `https://export.arxiv.org/api/query?search_query=${query}&sortBy=lastUpdatedDate&sortOrder=ascending`;
-            try {
-                const response = await request({ url });
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(response, "application/xml");
-                const entries = Array.from(xmlDoc.querySelectorAll("entry")).map(entry => {
-                    return {
-                        title: entry.querySelector("title")?.textContent,
-                        summary: entry.querySelector("summary")?.textContent,
-                        id: entry.querySelector("id")?.textContent
-                    }
-                });
-                new SearchResultsModal(this.app, this.plugin, entries).open();
-            } catch (error) {
-                console.error('Failed to fetch papers:', error);
-                new Notice('Failed to fetch papers.');
-            }
+            await this.performSearch(query, 0);
         };
 
         // Event listener for the search button
@@ -156,22 +140,68 @@ class ArxivSearchModal extends Modal {
             }
         });
     }
+
+    async performSearch(query: string, start: number) {
+        const url = `https://export.arxiv.org/api/query?search_query=${query}&start=${start}&max_results=5&sortBy=lastUpdatedDate&sortOrder=ascending`;
+        try {
+            const response = await request({ url });
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(response, "text/xml");
+            const entries = Array.from(xmlDoc.querySelectorAll("entry")).map(entry => {
+                return {
+                    title: entry.querySelector("title")?.textContent,
+                    summary: entry.querySelector("summary")?.textContent,
+                    id: entry.querySelector("id")?.textContent
+                }
+            });
+            
+            // Try different ways to get the total results
+            let totalResults = 0;
+            const totalResultsElement = xmlDoc.querySelector("opensearch\\:totalResults, totalResults");
+            if (totalResultsElement) {
+                totalResults = parseInt(totalResultsElement.textContent || "0");
+            } else {
+                // If we can't find the element, count the entries
+                const allEntries = xmlDoc.querySelectorAll("entry");
+                totalResults = allEntries.length;
+            }
+
+            
+            
+            
+            
+            new SearchResultsModal(this.app, this.plugin, entries, query, start, totalResults).open();
+        } catch (error) {
+            console.error('Failed to fetch papers:', error);
+            new Notice('Failed to fetch papers.');
+        }
+    }
 }
 
 class SearchResultsModal extends Modal {
     plugin: RhizObsidian;
     results: any[];
+    query: string;
+    start: number;
+    totalResults: number;
 
-    constructor(app: App, plugin: RhizObsidian, results: any[]) {
+    constructor(app: App, plugin: RhizObsidian, results: any[], query: string, start: number, totalResults: number) {
         super(app);
         this.plugin = plugin;
         this.results = results;
+        this.query = query;
+        this.start = start;
+        this.totalResults = totalResults;
     }
 
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
         contentEl.createEl('h1', { text: 'Search Results' });
+
+        
+        
+        
 
         this.results.forEach(result => {
             const resultEl = contentEl.createEl('div', { cls: 'search-result' });
@@ -194,8 +224,39 @@ class SearchResultsModal extends Modal {
             };
         });
 
-        // Add CSS for the collapsible summary
+        this.addPagination(contentEl);
         this.addStyle();
+    }
+
+    addPagination(contentEl: HTMLElement) {
+        const pagination = contentEl.createEl('div', { cls: 'pagination' });
+        const prevButton = pagination.createEl('button', { text: 'Previous' });
+        const nextButton = pagination.createEl('button', { text: 'Next' });
+        
+        let pageInfoText;
+        if (this.totalResults > 0) {
+            pageInfoText = `Showing ${this.start + 1}-${Math.min(this.start + this.results.length, this.totalResults)} of ${this.totalResults}`;
+        } else {
+            pageInfoText = `Showing ${this.start + 1}-${this.start + this.results.length}`;
+        }
+        const pageInfo = pagination.createEl('span', { text: pageInfoText });
+
+        prevButton.onclick = async () => {
+            if (this.start > 0) {
+                this.close();
+                await new ArxivSearchModal(this.app, this.plugin).performSearch(this.query, Math.max(0, this.start - 5));
+            }
+        };
+
+        nextButton.onclick = async () => {
+            if (this.results.length === 5) {  // If we have a full page, there might be more
+                this.close();
+                await new ArxivSearchModal(this.app, this.plugin).performSearch(this.query, this.start + 5);
+            }
+        };
+
+        prevButton.disabled = this.start === 0;
+        nextButton.disabled = this.results.length < 5;  // Disable next if we don't have a full page
     }
 
     addStyle() {
@@ -215,6 +276,16 @@ class SearchResultsModal extends Modal {
             }
             .hidden {
                 display: none;
+            }
+            .pagination {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 20px;
+            }
+            .pagination button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
             }
         `;
         document.head.appendChild(style);
@@ -253,7 +324,7 @@ export default class RhizObsidian extends Plugin {
         if (iframeSrc) {
             // Ensure the iframeSrc is a complete URL
             const fullIframeSrc = iframeSrc.startsWith('http') ? iframeSrc : `https://${iframeSrc}`;
-            console.log(`Fetching iframe from: ${fullIframeSrc}`);
+            
 
             try {
                 const iframeHtml = await request({ url: fullIframeSrc });
@@ -265,7 +336,7 @@ export default class RhizObsidian extends Plugin {
                 return { title, transcriptLink: 'No transcript available due to error' };
             }
         } else {
-            console.log('No iframe found in the HTML.');
+            
             return { title, transcriptLink: 'No transcript available' };
         }
     }
@@ -303,7 +374,7 @@ export default class RhizObsidian extends Plugin {
         });
 
         const pdfUrl = result.id.replace('abs', 'pdf');
-        console.log('PDF URL:', pdfUrl);
+        
         try {
             const response = await fetch(pdfUrl);
             if (!response.ok) throw new Error('Failed to fetch PDF');
