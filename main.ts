@@ -150,8 +150,11 @@ class ArxivSearchModal extends Modal {
             const entries = Array.from(xmlDoc.querySelectorAll("entry")).map(entry => {
                 return {
                     title: entry.querySelector("title")?.textContent,
-                    summary: entry.querySelector("summary")?.textContent,
-                    id: entry.querySelector("id")?.textContent
+                    summary: entry.querySelector("summary")?.textContent,   
+                    id: entry.querySelector("id")?.textContent,
+                    authors: Array.from(entry.querySelectorAll("author")).map(author => author.querySelector("name")?.textContent),
+                    published: entry.querySelector("published")?.textContent,                    
+                    categories: Array.from(entry.querySelectorAll("category")).map(category => category.getAttribute("term"))
                 }
             });
             
@@ -164,12 +167,7 @@ class ArxivSearchModal extends Modal {
                 // If we can't find the element, count the entries
                 const allEntries = xmlDoc.querySelectorAll("entry");
                 totalResults = allEntries.length;
-            }
-
-            
-            
-            
-            
+            }                                                
             new SearchResultsModal(this.app, this.plugin, entries, query, start, totalResults).open();
         } catch (error) {
             console.error('Failed to fetch papers:', error);
@@ -199,13 +197,12 @@ class SearchResultsModal extends Modal {
         contentEl.empty();
         contentEl.createEl('h1', { text: 'Search Results' });
 
-        
-        
-        
-
         this.results.forEach(result => {
             const resultEl = contentEl.createEl('div', { cls: 'search-result' });
             const titleEl = resultEl.createEl('h2', { text: result.title });
+            const authorsEl = resultEl.createEl('p', { text: result.authors.join(', ') });
+            const publishedEl = resultEl.createEl('p', { text: result.published });
+            const categoriesEl = resultEl.createEl('p', { text: result.categories.join(', ') });
             
             // Create a collapsible container for the summary
             const summaryContainer = resultEl.createEl('div', { cls: 'summary-container' });
