@@ -33,8 +33,7 @@ export class EpisodeListModal extends Modal {
             const indexButton = episodeContainer.createEl('button', { text: 'Index Episode' });
             episodeContainer.createEl('span', { text: `${episode.number}: ${episode.title}` });
             
-            indexButton.addEventListener('click', async () => {
-                this.close();
+            indexButton.addEventListener('click', async () => {                
                 await this.fetchAndCreateNote(episode.number);
             });
         });
