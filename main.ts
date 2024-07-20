@@ -3,7 +3,7 @@ import { PodcastSelectionModal } from './podcasts/modal';
 import { PaperSelectionModal } from './papers/modal';
 
 export class MainSelectionModal extends Modal {
-    plugin: RhizObsidian;
+    plugin: RhizObsidian;    
 
     constructor(app: App, plugin: RhizObsidian) {
         super(app);
@@ -30,6 +30,8 @@ export class MainSelectionModal extends Modal {
 }
 
 export default class RhizObsidian extends Plugin {
+    categories: { id: string; name: string }[]; 
+    
     async onload() {
         this.addRibbonIcon('dice', 'RhizObsidian', () => {
             new MainSelectionModal(this.app, this).open();

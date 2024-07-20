@@ -1,16 +1,19 @@
-import { App, Modal, Notice, request } from 'obsidian';
+import { App, Modal, Notice, request, TFile } from 'obsidian';
 import RhizObsidian from '../main';
 
 export class ArxivSearchModal extends Modal {
     plugin: RhizObsidian;
+    
 
     constructor(app: App, plugin: RhizObsidian) {
         super(app);
         this.plugin = plugin;
+        this.plugin.categories = this.loadCategories();
     }
 
     onOpen() {
         const { contentEl } = this;
+        
         contentEl.empty();
         contentEl.createEl('h1', { text: 'Search Arxiv Papers' });
 
@@ -62,6 +65,428 @@ export class ArxivSearchModal extends Modal {
             new Notice('Failed to fetch papers.');
         }
     }
+
+    loadCategories() {
+        const categoriesJson = [
+              {
+                "id": "cs.AI",
+                "name": "Artificial Intelligence"
+              },
+              {
+                "id": "cs.AR",
+                "name": "Hardware Architecture"
+              },
+              {
+                "id": "cs.CC",
+                "name": "Computational Complexity"
+              },
+              {
+                "id": "cs.CE",
+                "name": "Computational Engineering, Finance, and Science"
+              },
+              {
+                "id": "cs.CG",
+                "name": "Computational Geometry"
+              },
+              {
+                "id": "cs.CL",
+                "name": "Computation and Language"
+              },
+              {
+                "id": "cs.CR",
+                "name": "Cryptography and Security"
+              },
+              {
+                "id": "cs.CV",
+                "name": "Computer Vision and Pattern Recognition"
+              },
+              {
+                "id": "cs.CY",
+                "name": "Computers and Society"
+              },
+              {
+                "id": "cs.DB",
+                "name": "Databases"
+              },
+              {
+                "id": "cs.DC",
+                "name": "Distributed, Parallel, and Cluster Computing"
+              },
+              {
+                "id": "cs.DL",
+                "name": "Digital Libraries"
+              },
+              {
+                "id": "cs.DM",
+                "name": "Discrete Mathematics"
+              },
+              {
+                "id": "cs.DS",
+                "name": "Data Structures and Algorithms"
+              },
+              {
+                "id": "cs.ET",
+                "name": "Emerging Technologies"
+              },
+              {
+                "id": "cs.FL",
+                "name": "Formal Languages and Automata Theory"
+              },
+              {
+                "id": "cs.GL",
+                "name": "General Literature"
+              },
+              {
+                "id": "cs.GR",
+                "name": "Graphics"
+              },
+              {
+                "id": "cs.GT",
+                "name": "Computer Science and Game Theory"
+              },
+              {
+                "id": "cs.HC",
+                "name": "Human-Computer Interaction"
+              },
+              {
+                "id": "cs.IR",
+                "name": "Information Retrieval"
+              },
+              {
+                "id": "cs.IT",
+                "name": "Information Theory"
+              },
+              {
+                "id": "cs.LG",
+                "name": "Machine Learning"
+              },
+              {
+                "id": "cs.LO",
+                "name": "Logic in Computer Science"
+              },
+              {
+                "id": "cs.MA",
+                "name": "Multiagent Systems"
+              },
+              {
+                "id": "cs.MM",
+                "name": "Multimedia"
+              },
+              {
+                "id": "cs.MS",
+                "name": "Mathematical Software"
+              },
+              {
+                "id": "cs.NA",
+                "name": "Numerical Analysis"
+              },
+              {
+                "id": "cs.NE",
+                "name": "Neural and Evolutionary Computing"
+              },
+              {
+                "id": "cs.NI",
+                "name": "Networking and Internet Architecture"
+              },
+              {
+                "id": "cs.OH",
+                "name": "Other Computer Science"
+              },
+              {
+                "id": "cs.OS",
+                "name": "Operating Systems"
+              },
+              {
+                "id": "cs.PF",
+                "name": "Performance"
+              },
+              {
+                "id": "cs.PL",
+                "name": "Programming Languages"
+              },
+              {
+                "id": "cs.RO",
+                "name": "Robotics"
+              },
+              {
+                "id": "cs.SC",
+                "name": "Symbolic Computation"
+              },
+              {
+                "id": "cs.SD",
+                "name": "Sound"
+              },
+              {
+                "id": "cs.SE",
+                "name": "Software Engineering"
+              },
+              {
+                "id": "cs.SI",
+                "name": "Social and Information Networks"
+              },
+              {
+                "id": "cs.SY",
+                "name": "Systems and Control"
+              }
+            ,
+              {
+                "id": "econ.EM",
+                "name": "Econometrics"
+              },
+              {
+                "id": "econ.GN",
+                "name": "General Economics"
+              },
+              {
+                "id": "econ.TH",
+                "name": "Theoretical Economics"
+              }
+            ,
+              {
+                "id": "eess.AS",
+                "name": "Audio and Speech Processing"
+              },
+              {
+                "id": "eess.IV",
+                "name": "Image and Video Processing"
+              },
+              {
+                "id": "eess.SP",
+                "name": "Signal Processing"
+              },
+              {
+                "id": "eess.SY",
+                "name": "Systems and Control"
+              }
+            ,
+              {
+                "id": "math.AC",
+                "name": "Commutative Algebra"
+              },
+              {
+                "id": "math.AG",
+                "name": "Algebraic Geometry"
+              },
+              {
+                "id": "math.AP",
+                "name": "Analysis of PDEs"
+              },
+              {
+                "id": "math.AT",
+                "name": "Algebraic Topology"
+              },
+              {
+                "id": "math.CA",
+                "name": "Classical Analysis and ODEs"
+              },
+              {
+                "id": "math.CO",
+                "name": "Combinatorics"
+              },
+              {
+                "id": "math.CT",
+                "name": "Category Theory"
+              },
+              {
+                "id": "math.CV",
+                "name": "Complex Variables"
+              }
+            ,
+              {
+                "id": "physics.acc-ph",
+                "name": "Accelerator Physics"
+              },
+              {
+                "id": "physics.ao-ph",
+                "name": "Atmospheric and Oceanic Physics"
+              },
+              {
+                "id": "physics.app-ph",
+                "name": "Applied Physics"
+              },
+              {
+                "id": "physics.atm-clus",
+                "name": "Atomic and Molecular Clusters"
+              },
+              {
+                "id": "physics.atom-ph",
+                "name": "Atomic Physics"
+              },
+              {
+                "id": "physics.bio-ph",
+                "name": "Biological Physics"
+              },
+              {
+                "id": "physics.chem-ph",
+                "name": "Chemical Physics"
+              },
+              {
+                "id": "physics.class-ph",
+                "name": "Classical Physics"
+              },
+              {
+                "id": "physics.comp-ph",
+                "name": "Computational Physics"
+              },
+              {
+                "id": "physics.data-an",
+                "name": "Data Analysis, Statistics and Probability"
+              },
+              {
+                "id": "physics.ed-ph",
+                "name": "Physics Education"
+              },
+              {
+                "id": "physics.flu-dyn",
+                "name": "Fluid Dynamics"
+              },
+              {
+                "id": "physics.gen-ph",
+                "name": "General Physics"
+              },
+              {
+                "id": "physics.geo-ph",
+                "name": "Geophysics"
+              },
+              {
+                "id": "physics.hist-ph",
+                "name": "History and Philosophy of Physics"
+              },
+              {
+                "id": "physics.ins-det",
+                "name": "Instrumentation and Detectors"
+              },
+              {
+                "id": "physics.med-ph",
+                "name": "Medical Physics"
+              },
+              {
+                "id": "physics.optics",
+                "name": "Optics"
+              },
+              {
+                "id": "physics.plasm-ph",
+                "name": "Plasma Physics"
+              },
+              {
+                "id": "physics.pop-ph",
+                "name": "Popular Physics"
+              },
+              {
+                "id": "physics.soc-ph",
+                "name": "Physics and Society"
+              },
+              {
+                "id": "physics.space-ph",
+                "name": "Space Physics"
+              }
+            ,
+              {
+                "id": "q-bio.BM",
+                "name": "Biomolecules"
+              },
+              {
+                "id": "q-bio.CB",
+                "name": "Cell Behavior"
+              },
+              {
+                "id": "q-bio.GN",
+                "name": "Genomics"
+              },
+              {
+                "id": "q-bio.MN",
+                "name": "Molecular Networks"
+              },
+              {
+                "id": "q-bio.NC",
+                "name": "Neurons and Cognition"
+              },
+              {
+                "id": "q-bio.OT",
+                "name": "Other Quantitative Biology"
+              },
+              {
+                "id": "q-bio.PE",
+                "name": "Populations and Evolution"
+              },
+              {
+                "id": "q-bio.QM",
+                "name": "Quantitative Methods"
+              },
+              {
+                "id": "q-bio.SC",
+                "name": "Subcellular Processes"
+              },
+              {
+                "id": "q-bio.TO",
+                "name": "Tissues and Organs"
+              }
+            ,
+              {
+                "id": "q-fin.CP",
+                "name": "Computational Finance"
+              },
+              {
+                "id": "q-fin.EC",
+                "name": "Economics"
+              },
+              {
+                "id": "q-fin.GN",
+                "name": "General Finance"
+              },
+              {
+                "id": "q-fin.MF",
+                "name": "Mathematical Finance"
+              },
+              {
+                "id": "q-fin.PM",
+                "name": "Portfolio Management"
+              },
+              {
+                "id": "q-fin.PR",
+                "name": "Pricing of Securities"
+              },
+              {
+                "id": "q-fin.RM",
+                "name": "Risk Management"
+              },
+              {
+                "id": "q-fin.ST",
+                "name": "Statistical Finance"
+              },
+              {
+                "id": "q-fin.TR",
+                "name": "Trading and Market Microstructure"
+              }
+            ,
+              {
+                "id": "stat.AP",
+                "name": "Applications"
+              },
+              {
+                "id": "stat.CO",
+                "name": "Computation"
+              },
+              {
+                "id": "stat.ME",
+                "name": "Methodology"
+              },
+              {
+                "id": "stat.ML",
+                "name": "Machine Learning"
+              },
+              {
+                "id": "stat.OT",
+                "name": "Other Statistics"
+              },
+              {
+                "id": "stat.TH",
+                "name": "Statistics Theory"
+              }
+        ];
+    
+        return categoriesJson;
+    };
 }
 
 class SearchResultsModal extends Modal {
@@ -90,7 +515,13 @@ class SearchResultsModal extends Modal {
             const titleEl = resultEl.createEl('h2', { text: result.title });
             const authorsEl = resultEl.createEl('p', { text: result.authors.join(', ') });
             const publishedEl = resultEl.createEl('p', { text: result.published });
-            const categoriesEl = resultEl.createEl('p', { text: result.categories.join(', ') });
+            // Map category codes to names
+            const categoryNames = result.categories.map((code: string) => {
+                const category = this.plugin.categories.find(cat => cat.id === code);
+                return category ? category.name : code; 
+            });
+
+            const categoriesEl = resultEl.createEl('p', { text: categoryNames.join(', ') });
 
             const summaryContainer = resultEl.createEl('div', { cls: 'summary-container' });
             const summaryToggle = summaryContainer.createEl('button', { text: 'Show Summary', cls: 'summary-toggle' });
@@ -203,5 +634,7 @@ class SearchResultsModal extends Modal {
             new Notice('Failed to download PDF.');
         }
     }
+
+    
 }
 
