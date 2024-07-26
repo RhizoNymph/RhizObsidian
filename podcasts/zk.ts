@@ -122,7 +122,7 @@ export class EpisodeListModal extends Modal {
 
     async createNote(episodeNumber: string, title: string, transcript: string) {
         // Sanitize the title to remove any characters that are not allowed in file names
-        const sanitizedTitle = title.replace(/[\\/:*?"<>|]/g, '-');
+        const sanitizedTitle = title.replace(/[\\/:*?"<>|]/g, '-').replace(`${episodeNumber} - Episode `, '');
 
         const dirPath = 'Sources/Podcasts/ZK Podcast/Episodes';
         const fileName = `${dirPath}/${episodeNumber} - ${sanitizedTitle}.md`;
