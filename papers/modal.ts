@@ -1,5 +1,7 @@
 import { App, Modal } from 'obsidian';
 import { ArxivSearchModal } from './arxiv';
+import { DailyPapersModal } from './huggingface';
+
 import RhizObsidian from '../main';
 
 export class PaperSelectionModal extends Modal {
@@ -21,5 +23,11 @@ export class PaperSelectionModal extends Modal {
             this.close();
         };
 
+        const huggingfaceButton = contentEl.createEl('button', { text: 'HuggingFace Papers' });
+        huggingfaceButton.onclick = () => {
+            new DailyPapersModal(this.app, this.plugin).open();
+            this.close();
+        };
     }
 }
+
