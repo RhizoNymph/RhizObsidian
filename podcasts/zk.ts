@@ -124,7 +124,7 @@ export class EpisodeListModal extends Modal {
         // Sanitize the title to remove any characters that are not allowed in file names
         const sanitizedTitle = title.replace(/[\\/:*?"<>|]/g, '-').replace(`${episodeNumber} - Episode `, '');
 
-        const dirPath = 'Sources/Podcasts/ZK Podcast/Episodes';
+        const dirPath = 'Sources/Podcasts/Transcripts/ZK Podcast/';
         const fileName = `${dirPath}/${episodeNumber} - ${sanitizedTitle}.md`;
 
         // Ensure the directory exists before creating the file

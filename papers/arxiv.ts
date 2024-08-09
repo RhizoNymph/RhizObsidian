@@ -607,8 +607,8 @@ class SearchResultsModal extends Modal {
 
     async createNoteAndDownloadPDF(result: any) {        
         const sanitizedTitle = result.title.replace(/[\\/:*?"<>|]/g, '-');
-        const dirPath = `Sources/Papers/${sanitizedTitle}`;
-        const filePath = `${dirPath}/${sanitizedTitle}.md`;
+        const dirPath = `Sources/Papers/`;
+        const filePath = `${dirPath}/Abstracts/${sanitizedTitle}.md`;
 
         // Ensure the directory exists before creating the file
         await this.app.vault.createFolder(dirPath).catch(err => console.error('Error creating folder:', err));
@@ -626,7 +626,7 @@ class SearchResultsModal extends Modal {
             if (!response.ok) throw new Error('Failed to fetch PDF');
             const pdfBlob = await response.blob();
             const arrayBuffer = await pdfBlob.arrayBuffer();
-            await this.app.vault.createBinary(`${dirPath}/${sanitizedTitle}.pdf`, arrayBuffer);
+            await this.app.vault.createBinary(`${dirPath}/PDFs/${sanitizedTitle}.pdf`, arrayBuffer);
             
             new Notice('PDF downloaded successfully');
         } catch (error) {

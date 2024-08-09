@@ -60,14 +60,14 @@ export class DailyPapersModal extends Modal {
 
     async downloadPaperAndCreateNote(paper: Paper) {
         const sanitizedTitle = paper.title.replace(/[\\/:*?"<>|]/g, '-');
-        const dirPath = `Sources/Papers/${sanitizedTitle}`;
-        const filePath = `${dirPath}/${sanitizedTitle}.md`;
+        const dirPath = `Sources/Papers/`;
+        const abstractPath = `${dirPath}/Abstracts/${sanitizedTitle}.md`;
 
         // Ensure the directory exists before creating the file
         await this.app.vault.createFolder(dirPath).catch(err => console.error('Error creating folder:', err));
 
         // Create the note with the summary
-        await this.app.vault.create(filePath, paper.summary).catch(err => {
+        await this.app.vault.create(abstractPath, paper.summary).catch(err => {
             console.error('Error creating note:', err);
             new Notice('Error creating note.');
         });
@@ -89,7 +89,7 @@ export class DailyPapersModal extends Modal {
             }
 
             const arrayBuffer = response.arrayBuffer;
-            await this.app.vault.createBinary(`${dirPath}/${sanitizedTitle}.pdf`, arrayBuffer);
+            await this.app.vault.createBinary(`${dirPath}/PDFs/${sanitizedTitle}.pdf`, arrayBuffer);
             
             new Notice('PDF downloaded successfully');
         } catch (error) {
