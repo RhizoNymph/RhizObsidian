@@ -2,7 +2,6 @@ import { App, Modal, Notice, request, TFile } from 'obsidian';
 import RhizObsidian from '../main';
 import * as cheerio from 'cheerio';
 
-var scholarly = require('scholarly');
 interface ScholarResult {
     title: string;
     url: string;
@@ -138,16 +137,11 @@ class SearchResultsModal extends Modal {
             const summaryEl = resultEl.createEl('p', { text: result.description });            
 
             if (result.pdf) {
-                const pdfButton = resultEl.createEl('button', { text: 'Download PDF' });
-                pdfButton.onclick = () => {
-                    window.open(result.pdf, '_blank');
+                const pdfButton = resultEl.createEl('button', { text: 'Create Note & Download PDF' });
+                pdfButton.onclick = async () => {
+                    await this.createNoteAndDownloadPDF(result);
                 };
             }
-
-            const createNoteButton = resultEl.createEl('button', { text: 'Create Note' });
-            createNoteButton.onclick = async () => {
-                await this.createNote(result);
-            };
         });
 
         this.addStyle();
@@ -172,39 +166,48 @@ class SearchResultsModal extends Modal {
         document.head.appendChild(style);
     }
 
-    async createNote(result: any) {
+    async createNoteAndDownloadPDF(result: any) {
         const sanitizedTitle = result.title.replace(/[\\/:*?"<>|]/g, '-');
         const dirPath = `Sources/Papers/`;
-        const filePath = `${dirPath}/${sanitizedTitle}.md`;
+        const abstractFilePath = `${dirPath}/Abstracts/${sanitizedTitle}.md`;
+        const pdfFilePath = `${dirPath}/PDFs/${sanitizedTitle}.pdf`;
 
+        // Ensure the directory exists before creating the file
         await this.app.vault.createFolder(dirPath).catch(err => console.error('Error creating folder:', err));
 
+        // Create the note with only the abstract
         const noteContent = `# ${result.title}
 
-        Authors: ${result.authors.join(', ')}
-        Year: ${result.year}
-        Citations: ${result.numCitations}
+${result.description}
 
-        ## Summary
-        ${result.description}
+[PDF](${result.pdf})
+`;
 
-        ## Links
-        ${result.url ? `- [Paper URL](${result.url})` : ''}
-        ${result.pdf ? `- [PDF](${result.pdf})` : ''}
-        ${result.citationUrl ? `- [Citation URL](${result.citationUrl})` : ''}
-        ${result.relatedUrl ? `- [Related Articles](${result.relatedUrl})` : ''}
-        ${result.urlVersionsList ? `- [All Versions](${result.urlVersionsList})` : ''}
-        `;
-
-        await this.app.vault.create(filePath, noteContent).catch(err => {
+        await this.app.vault.create(abstractFilePath, noteContent).catch(err => {
             console.error('Error creating note:', err);
             new Notice('Error creating note.');
+            return;
         });
 
-        new Notice('Note created successfully');
+        new Notice('Abstract note created successfully');
+
+        if (result.pdf) {
+            try {
+                const response = await fetch(result.pdf);
+                if (!response.ok) throw new Error('Failed to fetch PDF');
+                const pdfBlob = await response.blob();
+                const arrayBuffer = await pdfBlob.arrayBuffer();
+                await this.app.vault.createBinary(pdfFilePath, arrayBuffer);
+                new Notice('PDF downloaded successfully');
+            } catch (error) {
+                console.error('Failed to download PDF:', error);
+                new Notice('Failed to download PDF.');
+            }
+        }
     }
 }
 
 export function searchAndOpenModal(app: App, plugin: RhizObsidian) {
     new ScholarSearchModal(app, plugin).open();
 }
+
