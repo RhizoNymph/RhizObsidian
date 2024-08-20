@@ -1,4 +1,4 @@
-import { App, Modal, Notice, request, TFile } from 'obsidian';
+import { App, Modal, Notice, request, TFile, requestUrl } from 'obsidian';
 import RhizObsidian from '../main';
 import * as cheerio from 'cheerio';
 
@@ -49,8 +49,10 @@ export class ScholarSearchModal extends Modal {
     async performSearch(query: string) {
         try {            
             const url = `https://scholar.google.com/scholar?q=${encodeURIComponent(query)}`;
+            
+            // Use the global request function
             const response = await request({ url });
-            console.log('Raw HTML response:', response); // Add this line
+                        
             const results = this.parseScholarResults(response);
             new SearchResultsModal(this.app, this.plugin, results).open();
         } catch (error) {
@@ -75,8 +77,15 @@ export class ScholarSearchModal extends Modal {
             if (!title) {
                 title = $element.find('.gs_rt a').text().trim();
             }
-
+            
             const url = $element.find('.gs_rt a').attr('href') || '';
+            
+            if (url.includes('doi')) {
+                //example: https://www.tandfonline.com/doi/abs/10.1080/19443994.2012.664696
+                const doi = url.match(/doi\/(abs|full)\/([^?]+)/)?.[2];
+                console.log(doi);
+            }
+
             const description = $element.find('.gs_rs').text().trim();
             const numCitations = parseInt($element.find('a:contains("Cited by")').text().replace('Cited by ', '')) || 0;
             const pdf = $element.find('.gs_or_ggsm a[href$=".pdf"]').attr('href') || undefined;
@@ -136,7 +145,15 @@ class SearchResultsModal extends Modal {
             const citationsEl = resultEl.createEl('p', { text: `Citations: ${result.numCitations}` });
             const summaryEl = resultEl.createEl('p', { text: result.description });            
 
-            if (result.pdf) {
+            if (result.pdf || result.url) {
+                const openButton = resultEl.createEl('button', { text: 'Open' });
+                openButton.onclick = () => {
+                    if (result.pdf) {
+                        window.open(result.pdf, '_blank');
+                    } else {
+                        window.open(result.url, '_blank');
+                    }
+                };
                 const pdfButton = resultEl.createEl('button', { text: 'Create Note & Download PDF' });
                 pdfButton.onclick = async () => {
                     await this.createNoteAndDownloadPDF(result);
@@ -178,10 +195,10 @@ class SearchResultsModal extends Modal {
         // Create the note with only the abstract
         const noteContent = `# ${result.title}
 
-${result.description}
+        ${result.description}
 
-[PDF](${result.pdf})
-`;
+        [PDF](${result.pdf})
+        `;
 
         await this.app.vault.create(abstractFilePath, noteContent).catch(err => {
             console.error('Error creating note:', err);
@@ -192,12 +209,14 @@ ${result.description}
         new Notice('Abstract note created successfully');
 
         if (result.pdf) {
-            try {
-                const response = await fetch(result.pdf);
-                if (!response.ok) throw new Error('Failed to fetch PDF');
-                const pdfBlob = await response.blob();
-                const arrayBuffer = await pdfBlob.arrayBuffer();
-                await this.app.vault.createBinary(pdfFilePath, arrayBuffer);
+            try {                
+                const response = await requestUrl({ url: result.pdf, method: 'GET' });
+
+                if (!response || response.status !== 200) throw new Error('Failed to fetch PDF');
+                
+                const arrayBuffer = response.arrayBuffer;
+                await this.app.vault.createBinary(`${dirPath}/PDFs/${sanitizedTitle}.pdf`, arrayBuffer);
+                
                 new Notice('PDF downloaded successfully');
             } catch (error) {
                 console.error('Failed to download PDF:', error);
@@ -210,4 +229,3 @@ ${result.description}
 export function searchAndOpenModal(app: App, plugin: RhizObsidian) {
     new ScholarSearchModal(app, plugin).open();
 }
-
