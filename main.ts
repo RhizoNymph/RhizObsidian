@@ -1,6 +1,7 @@
 import { App, Plugin, Modal } from 'obsidian';
 import { PodcastSelectionModal } from './podcasts/modal';
 import { PaperSelectionModal } from './papers/modal';
+import { BookSelectionModal } from './books/modal';
 import { extractPDFToMarkdown } from './util/pdf';
 
 export class MainSelectionModal extends Modal {
@@ -25,6 +26,12 @@ export class MainSelectionModal extends Modal {
         const papersButton = contentEl.createEl('button', { text: 'Papers' });
         papersButton.onclick = () => {
             new PaperSelectionModal(this.app, this.plugin).open();
+            this.close();
+        };
+
+        const booksButton = contentEl.createEl('button', { text: 'Books' });
+        booksButton.onclick = () => {
+            new BookSelectionModal(this.app, this.plugin).open();
             this.close();
         };
     }
