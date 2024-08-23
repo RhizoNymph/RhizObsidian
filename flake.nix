@@ -32,6 +32,8 @@
             echo "Node.js version: $(node --version)"
             echo "Yarn version: $(yarn --version)"
             echo "TypeScript version: $(tsc --version)"
+
+            npm install
           '';
         };
       });
