@@ -1,15 +1,16 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 import subprocess
 import os
-import zipfile
 import tempfile
-import shutil
 import re
+import base64
+import logging
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 def update_markdown_links(markdown_content, image_folder):
-    # Update image links in the markdown content
     pattern = r'!\[(.*?)\]\((.*?)\)'
     def replace_link(match):
         alt_text, image_path = match.groups()
@@ -20,41 +21,49 @@ def update_markdown_links(markdown_content, image_folder):
 
 @app.route('/convert', methods=['POST'])
 def convert_pdf():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+    app.logger.debug(f"Received request: {request.headers}")
+    app.logger.debug(f"Request data: {request.data[:100]}...")  # Log first 100 characters of request data
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
 
-    if file:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # Save the file to the temporary directory
-            input_path = os.path.join(temp_dir, file.filename)
-            file.save(input_path)
+    data = request.json
+    if 'file' not in data or 'filename' not in data:
+        return jsonify({"error": "Missing 'file' or 'filename' in request JSON"}), 400
 
-            # Define output path
+    with tempfile.TemporaryDirectory() as temp_dir:
+        try:
+            file_data = data['file']
+            file_name = secure_filename(data['filename'])
+            input_path = os.path.join(temp_dir, file_name)
+
+            # Check if the file data is base64 encoded
+            if file_data.startswith('data:application/pdf;base64,'):
+                file_data = file_data.split(',')[1]
+            
+            try:
+                pdf_content = base64.b64decode(file_data)
+            except Exception as e:
+                app.logger.error(f"Failed to decode base64 data: {e}")
+                return jsonify({"error": "Invalid base64 data"}), 400
+
+            with open(input_path, 'wb') as f:
+                f.write(pdf_content)
+
             output_folder = os.path.join(temp_dir, 'output')
             os.makedirs(output_folder, exist_ok=True)
 
-            # Run the marker conversion command
             command = f"marker_single {input_path} {output_folder} --batch_multiplier 2 --langs English"
+            app.logger.debug(f"Running command: {command}")
             process = subprocess.run(command, shell=True, capture_output=True, text=True)
 
             if process.returncode == 0:
-                # Create an 'images' folder
-                images_folder = os.path.join(os.path.join(output_folder, file.filename.replace('.pdf', '')), 'images')
+                images_folder = os.path.join(output_folder, os.path.splitext(file_name)[0], 'images')
                 os.makedirs(images_folder, exist_ok=True)
 
-                # Move all image files to the 'images' folder
-                for root, _, files in os.walk(output_folder):
-                    for file in files:
-                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-                            old_path = os.path.join(root, file)
-                            new_path = os.path.join(images_folder, file)
-                            shutil.move(old_path, new_path)
+                files_data = []
 
-                # Update markdown files to reflect new image locations
+                # Process markdown files
                 for root, _, files in os.walk(output_folder):
                     for file in files:
                         if file.lower().endswith('.md'):
@@ -64,22 +73,34 @@ def convert_pdf():
                             
                             updated_content = update_markdown_links(content, 'images')
                             
-                            with open(md_path, 'w', encoding='utf-8') as md_file:
-                                md_file.write(updated_content)
+                            files_data.append({
+                                "name": file,
+                                "type": "markdown",
+                                "content": updated_content
+                            })
 
-                # Zip the output folder and send it back
-                zip_path = os.path.join(temp_dir, 'converted_files.zip')
-                with zipfile.ZipFile(zip_path, 'w') as zipf:
-                    for root, _, files in os.walk(output_folder):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path, output_folder)
-                            zipf.write(file_path, arcname)
+                # Process image files
+                for root, _, files in os.walk(output_folder):
+                    for file in files:
+                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                            img_path = os.path.join(root, file)
+                            with open(img_path, 'rb') as img_file:
+                                img_content = base64.b64encode(img_file.read()).decode('utf-8')
+                            
+                            files_data.append({
+                                "name": os.path.join('images', file),
+                                "type": "image",
+                                "content": img_content
+                            })
 
-                return send_file(zip_path, as_attachment=True, download_name='converted_files.zip')
+                app.logger.info(f"Successfully processed PDF. Found {len(files_data)} files.")
+                return jsonify({"success": True, "files": files_data})
             else:
-                # Failure: Send back the error
+                app.logger.error(f"Conversion failed: {process.stderr}")
                 return jsonify({"error": "Conversion failed", "details": process.stderr}), 500
+        except Exception as e:
+            app.logger.exception("An error occurred during processing")
+            return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)

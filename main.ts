@@ -2,10 +2,10 @@ import { App, Plugin, Modal } from 'obsidian';
 import { PodcastSelectionModal } from './podcasts/modal';
 import { PaperSelectionModal } from './papers/modal';
 import { BookSelectionModal } from './books/modal';
-import { extractPDFToMarkdown } from './util/pdf';
+import { extractPDFToMarkdown, extractAllPDFsToMarkdown } from './util/pdf';
 
 export class MainSelectionModal extends Modal {
-    plugin: RhizObsidian;    
+    plugin: RhizObsidian;
 
     constructor(app: App, plugin: RhizObsidian) {
         super(app);
@@ -38,8 +38,8 @@ export class MainSelectionModal extends Modal {
 }
 
 export default class RhizObsidian extends Plugin {
-    categories: { id: string; name: string }[]; 
-    
+    categories: { id: string; name: string }[];
+
     async onload() {
         this.addCommand({
             id: 'open-rhizobsidian-modal',
@@ -53,6 +53,11 @@ export default class RhizObsidian extends Plugin {
             id: 'extract-pdf-to-markdown',
             name: 'Extract PDF to Markdown',
             callback: () => extractPDFToMarkdown(this.app)
+        });
+        this.addCommand({
+            id: 'extract-all-pdfs-to-markdown',
+            name: 'Extract All PDFs in Folder to Markdown',
+            callback: () => extractAllPDFsToMarkdown(this.app)
         });
         this.addRibbonIcon('dice', 'RhizObsidian', () => {
             new MainSelectionModal(this.app, this).open();
