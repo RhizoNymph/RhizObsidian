@@ -1,0 +1,17 @@
+Flask==3.0.3
+Werkzeug==3.0.4
+requests==2.32.3
+torch==2.4.1
+transformers==4.44.2
+librosa==0.10.2.post1
+numpy==1.26.4
+scipy==1.14.1
+soundfile==0.12.1
+tqdm==4.66.5
+regex==2024.9.11
+Pillow==10.4.0
+flask-cors==5.0.0
+anthropic==0.34.2
+Byaldi==0.0.2.post2
+RAGatouille==0.0.8.post4
+claudette==0.0.9
