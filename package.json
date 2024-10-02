@@ -13,6 +13,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^16.11.6",
+		"@types/xml2js": "^0.4.14",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
@@ -22,9 +23,11 @@
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
+		"@fal-ai/serverless-client": "^0.14.2",
 		"cheerio": "^1.0.0",
 		"jszip": "^3.10.1",
 		"libgenesis": "^1.1.10",
-		"pdfjs-dist": "^4.5.136"
+		"pdfjs-dist": "^4.5.136",
+		"xml2js": "^0.6.2"
 	}
 }

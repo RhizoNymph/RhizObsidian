@@ -25,7 +25,7 @@ export class ScholarSearchModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        
+
         contentEl.empty();
         contentEl.createEl('h1', { text: 'Search Google Scholar' });
 
@@ -47,12 +47,12 @@ export class ScholarSearchModal extends Modal {
     }
 
     async performSearch(query: string) {
-        try {            
+        try {
             const url = `https://scholar.google.com/scholar?q=${encodeURIComponent(query)}`;
-            
+
             // Use the global request function
             const response = await request({ url });
-                        
+
             const results = this.parseScholarResults(response);
             new SearchResultsModal(this.app, this.plugin, results).open();
         } catch (error) {
@@ -67,19 +67,19 @@ export class ScholarSearchModal extends Modal {
 
         $('.gs_r.gs_or.gs_scl').each((index, element) => {
             const $element = $(element);
-            
+
             let title = $element.find('.gs_rt').text().trim();
-            
+
             // Remove all [PDF], [BOOK], etc. from the start of the title
             title = title.replace(/^(\s*\[(?:PDF|BOOK|B|CITATION|HTML)\]\s*)+/i, '');
-            
+
             // If the title is empty, try to get it from the anchor tag
             if (!title) {
                 title = $element.find('.gs_rt a').text().trim();
             }
-            
+
             const url = $element.find('.gs_rt a').attr('href') || '';
-            
+
             if (url.includes('doi')) {
                 //example: https://www.tandfonline.com/doi/abs/10.1080/19443994.2012.664696
                 const doi = url.match(/doi\/(abs|full)\/([^?]+)/)?.[2];
@@ -92,7 +92,7 @@ export class ScholarSearchModal extends Modal {
 
             const metaInfo = $element.find('.gs_a').text();
             const authors = metaInfo.split('-')[0].trim().split(',').map(author => author.trim());
-            
+
             // New year extraction logic
             const yearMatch = metaInfo.match(/\b(19|20)\d{2}\b/);
             const year = yearMatch ? parseInt(yearMatch[0]) : 0;
@@ -143,7 +143,7 @@ class SearchResultsModal extends Modal {
             const authorsEl = resultEl.createEl('p', { text: result.authors.join(', ') });
             const yearEl = resultEl.createEl('p', { text: `Published: ${result.year}` });
             const citationsEl = resultEl.createEl('p', { text: `Citations: ${result.numCitations}` });
-            const summaryEl = resultEl.createEl('p', { text: result.description });            
+            const summaryEl = resultEl.createEl('p', { text: result.description });
 
             if (result.pdf || result.url) {
                 const openButton = resultEl.createEl('button', { text: 'Open' });
@@ -185,38 +185,21 @@ class SearchResultsModal extends Modal {
 
     async createNoteAndDownloadPDF(result: any) {
         const sanitizedTitle = result.title.replace(/[\\/:*?"<>|]/g, '-');
-        const dirPath = `Sources/Papers/`;
-        const abstractFilePath = `${dirPath}/Abstracts/${sanitizedTitle}.md`;
-        const pdfFilePath = `${dirPath}/PDFs/${sanitizedTitle}.pdf`;
+        const dirPath = `Papers/`;
+        const pdfFilePath = `${dirPath}/${sanitizedTitle}.pdf`;
 
         // Ensure the directory exists before creating the file
         await this.app.vault.createFolder(dirPath).catch(err => console.error('Error creating folder:', err));
 
-        // Create the note with only the abstract
-        const noteContent = `# ${result.title}
-
-        ${result.description}
-
-        [PDF](${result.pdf})
-        `;
-
-        await this.app.vault.create(abstractFilePath, noteContent).catch(err => {
-            console.error('Error creating note:', err);
-            new Notice('Error creating note.');
-            return;
-        });
-
-        new Notice('Abstract note created successfully');
-
         if (result.pdf) {
-            try {                
+            try {
                 const response = await requestUrl({ url: result.pdf, method: 'GET' });
 
                 if (!response || response.status !== 200) throw new Error('Failed to fetch PDF');
-                
+
                 const arrayBuffer = response.arrayBuffer;
-                await this.app.vault.createBinary(`${dirPath}/PDFs/${sanitizedTitle}.pdf`, arrayBuffer);
-                
+                await this.app.vault.createBinary(`${dirPath}/${sanitizedTitle}.pdf`, arrayBuffer);
+
                 new Notice('PDF downloaded successfully');
             } catch (error) {
                 console.error('Failed to download PDF:', error);

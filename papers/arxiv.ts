@@ -3,7 +3,7 @@ import RhizObsidian from '../main';
 
 export class ArxivSearchModal extends Modal {
     plugin: RhizObsidian;
-    
+
 
     constructor(app: App, plugin: RhizObsidian) {
         super(app);
@@ -13,7 +13,7 @@ export class ArxivSearchModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        
+
         contentEl.empty();
         contentEl.createEl('h1', { text: 'Search Arxiv Papers' });
 
@@ -43,14 +43,14 @@ export class ArxivSearchModal extends Modal {
             const entries = Array.from(xmlDoc.querySelectorAll("entry")).map(entry => {
                 return {
                     title: entry.querySelector("title")?.textContent,
-                    summary: entry.querySelector("summary")?.textContent,   
+                    summary: entry.querySelector("summary")?.textContent,
                     id: entry.querySelector("id")?.textContent,
                     authors: Array.from(entry.querySelectorAll("author")).map(author => author.querySelector("name")?.textContent),
-                    published: entry.querySelector("published")?.textContent,                    
+                    published: entry.querySelector("published")?.textContent,
                     categories: Array.from(entry.querySelectorAll("category")).map(category => category.getAttribute("term"))
                 }
             });
-            
+
             let totalResults = 0;
             const totalResultsElement = xmlDoc.querySelector("opensearch\\:totalResults, totalResults");
             if (totalResultsElement) {
@@ -58,7 +58,7 @@ export class ArxivSearchModal extends Modal {
             } else {
                 const allEntries = xmlDoc.querySelectorAll("entry");
                 totalResults = allEntries.length;
-            }                                                
+            }
             new SearchResultsModal(this.app, this.plugin, entries, query, start, totalResults).open();
         } catch (error) {
             console.error('Failed to fetch papers:', error);
@@ -484,7 +484,7 @@ export class ArxivSearchModal extends Modal {
                 "name": "Statistics Theory"
               }
         ];
-    
+
         return categoriesJson;
     };
 }
@@ -518,7 +518,7 @@ class SearchResultsModal extends Modal {
             // Map category codes to names
             const categoryNames = result.categories.map((code: string) => {
                 const category = this.plugin.categories.find(cat => cat.id === code);
-                return category ? category.name : code; 
+                return category ? category.name : code;
             });
 
             const categoriesEl = resultEl.createEl('p', { text: categoryNames.join(', ') });
@@ -546,7 +546,7 @@ class SearchResultsModal extends Modal {
         const pagination = contentEl.createEl('div', { cls: 'pagination' });
         const prevButton = pagination.createEl('button', { text: 'Previous' });
         const nextButton = pagination.createEl('button', { text: 'Next' });
-        
+
         let pageInfoText;
         if (this.totalResults > 0) {
             pageInfoText = `Showing ${this.start + 1}-${Math.min(this.start + this.results.length, this.totalResults)} of ${this.totalResults}`;
@@ -605,29 +605,22 @@ class SearchResultsModal extends Modal {
         document.head.appendChild(style);
     }
 
-    async createNoteAndDownloadPDF(result: any) {        
+    async createNoteAndDownloadPDF(result: any) {
         const sanitizedTitle = result.title.replace(/[\\/:*?"<>|]/g, '-');
-        const dirPath = `Sources/Papers/`;
-        const filePath = `${dirPath}/Abstracts/${sanitizedTitle}.md`;
+        const dirPath = `Papers/`;
 
         // Ensure the directory exists before creating the file
         await this.app.vault.createFolder(dirPath).catch(err => console.error('Error creating folder:', err));
 
-        // Create the note with the summary
-        await this.app.vault.create(filePath, result.summary).catch(err => {
-            console.error('Error creating note:', err);
-            new Notice('Error creating note.');
-        });
-
         const pdfUrl = result.id.replace('abs', 'pdf');
-        
+
         try {
             const response = await fetch(pdfUrl);
             if (!response.ok) throw new Error('Failed to fetch PDF');
             const pdfBlob = await response.blob();
             const arrayBuffer = await pdfBlob.arrayBuffer();
-            await this.app.vault.createBinary(`${dirPath}/PDFs/${sanitizedTitle}.pdf`, arrayBuffer);
-            
+            await this.app.vault.createBinary(`${dirPath}/${sanitizedTitle}.pdf`, arrayBuffer);
+
             new Notice('PDF downloaded successfully');
         } catch (error) {
             console.error('Failed to download PDF:', error);
@@ -635,6 +628,5 @@ class SearchResultsModal extends Modal {
         }
     }
 
-    
-}
 
+}

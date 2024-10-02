@@ -32,8 +32,8 @@ export class EpisodeListModal extends Modal {
             const episodeContainer = contentEl.createEl('div', { cls: 'episode-container' });
             const indexButton = episodeContainer.createEl('button', { text: 'Index Episode' });
             episodeContainer.createEl('span', { text: `${episode.number}: ${episode.title}` });
-            
-            indexButton.addEventListener('click', async () => {                
+
+            indexButton.addEventListener('click', async () => {
                 await this.fetchAndCreateNote(episode.number);
             });
         });
@@ -99,11 +99,11 @@ export class EpisodeListModal extends Modal {
         const doc = parser.parseFromString(html, 'text/html');
         const title = doc.querySelector('title')?.textContent || 'Unknown Title';
         const iframeSrc = doc.querySelector('iframe')?.getAttribute('src');
-    
+
         if (iframeSrc) {
             // Ensure the iframeSrc is a complete URL
             const fullIframeSrc = iframeSrc.startsWith('http') ? iframeSrc : `https://${iframeSrc}`;
-            
+
 
             try {
                 const iframeHtml = await request({ url: fullIframeSrc });
@@ -115,7 +115,7 @@ export class EpisodeListModal extends Modal {
                 return { title, transcriptLink: 'No transcript available due to error' };
             }
         } else {
-            
+
             return { title, transcriptLink: 'No transcript available' };
         }
     }
@@ -124,7 +124,7 @@ export class EpisodeListModal extends Modal {
         // Sanitize the title to remove any characters that are not allowed in file names
         const sanitizedTitle = title.replace(/[\\/:*?"<>|]/g, '-').replace(`${episodeNumber} - Episode `, '');
 
-        const dirPath = 'Sources/Podcasts/Transcripts/ZK Podcast/';
+        const dirPath = 'Podcasts/ZK Podcast/';
         const fileName = `${dirPath}/${episodeNumber} - ${sanitizedTitle}.md`;
 
         // Ensure the directory exists before creating the file

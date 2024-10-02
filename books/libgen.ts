@@ -11,7 +11,7 @@ export class LibgenSearchModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        
+
         contentEl.empty();
         contentEl.createEl('h1', { text: 'Search Libgen Books' });
 
@@ -98,24 +98,28 @@ class SearchResultsModal extends Modal {
 
     async downloadBook(book: any) {
         const sanitizedTitle = book.title.replace(/[\\/:*?"<>|]/g, '-');
-        const dirPath = `Sources/Books/`;
+        const dirPath = `Books/`;
         const filePath = `${dirPath}/${sanitizedTitle}.${book.extension}`;
 
-        try {
-            await this.app.vault.createFolder(dirPath);
-        } catch (error) {
-            console.error('Failed to create folder:', error);
-            new Notice('Failed to create folder for download.');
-            return;
+        const folderExists = await this.app.vault.adapter.exists(dirPath);
+        if (!folderExists) {
+            try {
+                await this.app.vault.createFolder(dirPath);
+            } catch (error) {
+                console.error('Failed to create folder:', error);
+                new Notice('Failed to create folder for download.');
+                return;
+            }
         }
-        
+
         const maxRetries = 3;
         let retries = 0;
 
         while (retries < maxRetries) {
+            console.log("Attempting Download...")
             try {
                 console.log(`Attempt ${retries + 1} to download from URL:`, book.download);
-                
+
                 const response = await requestUrl({
                     url: book.download,
                     headers: {
@@ -133,7 +137,7 @@ class SearchResultsModal extends Modal {
                 }
 
                 await this.app.vault.createBinary(filePath, response.arrayBuffer);
-                
+
                 new Notice('Book downloaded successfully');
                 return;
             } catch (error) {

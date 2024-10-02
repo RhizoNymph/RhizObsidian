@@ -1,5 +1,6 @@
 import { App, Modal } from 'obsidian';
-import { EpisodeListModal } from './zk';
+import { EpisodeListModal as ZKEpisodeListModal } from './zk';
+import { EpisodeListModal as RevolutionsEpisodeListModal } from './revolutions';
 import RhizObsidian from '../main';
 
 export class PodcastSelectionModal extends Modal {
@@ -15,9 +16,14 @@ export class PodcastSelectionModal extends Modal {
         contentEl.empty();
         contentEl.createEl('h1', { text: 'Select Podcast Source' });
 
-        const zkButton = contentEl.createEl('button', { text: 'ZK Podcasts' });
+        const zkButton = contentEl.createEl('button', { text: 'ZK Podcast' });
         zkButton.onclick = () => {
-            new EpisodeListModal(this.app, this.plugin).open();
+            new ZKEpisodeListModal(this.app, this.plugin).open();
+            this.close();
+        };
+        const revButton = contentEl.createEl('button', { text: 'Revolutions' });
+        revButton.onclick = () => {
+            new RevolutionsEpisodeListModal(this.app, this.plugin).open();
             this.close();
         };
 

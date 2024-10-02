@@ -51,6 +51,25 @@ export class DailyPapersModal extends Modal {
                 downloadButton.onclick = async () => {
                     await this.downloadPaperAndCreateNote(paper);
                 };
+
+                const downloadRenameButton = paperEl.createEl('button', { text: 'Download and Rename' });
+                downloadRenameButton.onclick = async () => {
+                    try {
+                        console.log("Starting download and rename process"); // Debug log
+                        const newName = await this.promptForNewName(paper.title);
+                        console.log("New name received:", newName); // Debug log
+                        if (newName) {
+                            console.log("Proceeding with download using new name:", newName); // Debug log
+                            await this.downloadPaperAndCreateNote(paper, newName);
+                        } else {
+                            console.log("Download cancelled: No new name provided");
+                            new Notice("Download cancelled: No new name provided");
+                        }
+                    } catch (error) {
+                        console.error("Error in download and rename process:", error);
+                        new Notice("Error in download and rename process");
+                    }
+                };
             });
         }).catch(error => {
             new Notice('Failed to fetch papers.');
@@ -58,23 +77,29 @@ export class DailyPapersModal extends Modal {
         });
     }
 
-    async downloadPaperAndCreateNote(paper: Paper) {
-        const sanitizedTitle = paper.title.replace(/[\\/:*?"<>|]/g, '-');
-        const dirPath = `Sources/Papers/`;
-        const abstractPath = `${dirPath}/Abstracts/${sanitizedTitle}.md`;
+    async downloadPaperAndCreateNote(paper: Paper, customName?: string) {
+        console.log("Downloading paper:", paper.title);
+        console.log("Custom name:", customName);
 
-        // Ensure the directory exists before creating the file
-        await this.app.vault.createFolder(dirPath).catch(err => console.error('Error creating folder:', err));
+        const sanitizedTitle = customName
+            ? customName.replace(/[\\/:*?"<>|]/g, '-')
+            : paper.title.replace(/[\\/:*?"<>|]/g, '-');
+        console.log("Sanitized title:", sanitizedTitle);
 
-        // Create the note with the summary
-        await this.app.vault.create(abstractPath, paper.summary).catch(err => {
-            console.error('Error creating note:', err);
-            new Notice('Error creating note.');
-        });
+        const dirPath = `Papers`;
+        const pdfPath = `${dirPath}/${sanitizedTitle}.pdf`;
 
-        const pdfUrl = `https://arxiv.org/pdf/${paper.id}.pdf`;
-        
         try {
+          // Ensure the directory exists before creating the file
+          await this.app.vault.createFolder(dirPath);
+        } catch(error) {
+          console.log("Directory already exists.")
+        }
+
+        try {
+            const pdfUrl = `https://arxiv.org/pdf/${paper.id}.pdf`;
+            console.log("Fetching PDF from:", pdfUrl);
+
             const response: RequestUrlResponse = await requestUrl({
                 url: pdfUrl,
                 method: 'GET',
@@ -89,13 +114,74 @@ export class DailyPapersModal extends Modal {
             }
 
             const arrayBuffer = response.arrayBuffer;
-            await this.app.vault.createBinary(`${dirPath}/PDFs/${sanitizedTitle}.pdf`, arrayBuffer);
-            
-            new Notice('PDF downloaded successfully');
+            await this.app.vault.createBinary(pdfPath, arrayBuffer);
+            console.log("PDF file created");
+
+            new Notice('Paper downloaded and renamed successfully');
         } catch (error) {
-            console.error('Failed to download PDF:', error);
-            new Notice('Failed to download PDF.');
+            console.error('Failed to download or rename paper:', error);
+            new Notice('Failed to download or rename paper.');
         }
+    }
+
+    async promptForNewName(originalTitle: string): Promise<string | null> {
+        return new Promise((resolve) => {
+            const modal = new Modal(this.app);
+            modal.titleEl.setText('Enter new name for the paper');
+
+            const inputEl = modal.contentEl.createEl('input', {
+                type: 'text',
+                value: originalTitle
+            });
+            inputEl.style.width = '100%';
+
+            const buttonContainer = modal.contentEl.createEl('div');
+            buttonContainer.style.display = 'flex';
+            buttonContainer.style.justifyContent = 'flex-end';
+            buttonContainer.style.marginTop = '10px';
+
+            const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
+            const confirmButton = buttonContainer.createEl('button', { text: 'Confirm' });
+
+            let isConfirmed = false;
+
+            const handleConfirm = () => {
+                const newName = inputEl.value.trim();
+                console.log("Confirming new name:", newName); // Debug log
+                isConfirmed = true;
+                modal.close();
+            };
+
+            cancelButton.onclick = () => {
+                console.log("Cancelling rename"); // Debug log
+                modal.close();
+            };
+
+            confirmButton.onclick = handleConfirm;
+
+            inputEl.focus();
+            inputEl.select();
+
+            // Handle Enter key
+            inputEl.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleConfirm();
+                }
+            });
+
+            modal.onClose = () => {
+                console.log("Modal closed"); // Debug log
+                if (isConfirmed) {
+                    const newName = inputEl.value.trim();
+                    resolve(newName !== '' ? newName : null);
+                } else {
+                    resolve(null);
+                }
+            };
+
+            modal.open();
+        });
     }
 
     async fetchPapers() {

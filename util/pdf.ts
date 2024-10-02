@@ -47,7 +47,7 @@ export async function extractPDFToMarkdown(app: App) {
         }
 
         const folderName = "";
-        const basePath = activeFile.path.replace('PDFs', 'Markdown').replace('.pdf', '').replace('.PDF', '')
+        const basePath = activeFile.path.replace('.pdf', '').replace('.PDF', '').replace('.Pdf', '')
         const folderPath = basePath + folderName;
         const imagesPath = folderPath;
 
@@ -101,7 +101,9 @@ async function createOrUpdateFile(app: App, path: string, content: string): Prom
         await ensureDirectoryExists(app, path);
 
         let file = app.vault.getAbstractFileByPath(path);
-        await app.vault.delete(file);
+        if (file) {
+            await app.vault.delete(file);
+        }
         await app.vault.create(path, content);
     } catch (error) {
         console.error(`Error creating/modifying file at ${path}:`, error);
@@ -195,7 +197,7 @@ export async function extractAllPDFsToMarkdown(app: App) {
 
       // Send the PDF to the Flask server
       const response = await requestUrl({
-          url: 'http://localhost:5000/convert',
+          url: 'http://office.lan.cchh.space:5000/convert',
           method: 'POST',
           body: requestBody,
           headers: {
